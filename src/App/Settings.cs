@@ -10,6 +10,10 @@ public sealed class Settings
     public bool PopupButton { get; set; } = true;
     public bool SwitchLanguage { get; set; } = true;
     public bool Autostart { get; set; } = true;
+    public bool TypoCorrection { get; set; } = true;     // исправлять опечатки (RU/EN)
+
+    public static string UserWordsPath => Path.Combine(Dir, "мои_слова.txt");
+    public static string IgnorePath => Path.Combine(Dir, "игнор.txt");
 
     static string Dir => Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData), "Antiraskladka");
     static string FilePath => Path.Combine(Dir, "settings.json");
