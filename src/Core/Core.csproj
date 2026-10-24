@@ -1,1 +1,2 @@
-<Project Sdk="Microsoft.NET.Sdk"><PropertyGroup><TargetFramework>net8.0</TargetFramework><Nullable>enable</Nullable><ImplicitUsings>enable</ImplicitUsings><RootNamespace>Antiraskladka.Core</RootNamespace><AssemblyName>Antiraskladka.Core</AssemblyName></PropertyGroup></Project>
+<Project Sdk="Microsoft.NET.Sdk"><PropertyGroup><TargetFramework>net8.0</TargetFramework><Nullable>enable</Nullable><ImplicitUsings>enable</ImplicitUsings><RootNamespace>Antiraskladka.Core</RootNamespace><AssemblyName>Antiraskladka.Core</AssemblyName></PropertyGroup>
+<ItemGroup><EmbeddedResource Include="Dict/ru.txt.gz" LogicalName="dict.ru" /><EmbeddedResource Include="Dict/en.txt.gz" LogicalName="dict.en" /></ItemGroup></Project>

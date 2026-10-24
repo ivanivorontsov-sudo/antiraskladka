@@ -23,6 +23,7 @@ sealed class MainWindow : Form
     readonly PopupButton _popup;
     Settings _s = Settings.Load();
     LayoutConverter _conv = null!;
+    Task<TypoCorrector>? _typos;
     IntPtr _latHkl, _cyrHkl, _hook, _lastForeign;
     Native.HookProc? _hookProc;
     Native.POINT _down; uint _lastDownTime; bool _busy;
@@ -35,6 +36,9 @@ sealed class MainWindow : Form
         _popup = new PopupButton(() => DoConvert(false));
         var menu = new ContextMenuStrip();
         menu.Items.Add("Сменить раскладку выделенного", null, (_, _) => DoConvert(true));
+        menu.Items.Add("Только исправить опечатки в выделенном", null, (_, _) => DoConvert(true, Mode.TyposOnly));
+        menu.Items.Add("Добавить выделенное слово в словарь", null, (_, _) => DoConvert(true, Mode.AddToDictionary));
+        menu.Items.Add("Никогда не исправлять выделенное слово", null, (_, _) => DoConvert(true, Mode.IgnoreWord));
         menu.Items.Add("Настройки…", null, (_, _) => OpenSettings());
         menu.Items.Add(new ToolStripSeparator());
         menu.Items.Add("Выход", null, (_, _) => { _tray.Visible = false; Application.Exit(); });
@@ -86,7 +90,13 @@ sealed class MainWindow : Form
         }
         else if (!_s.PopupButton && _hook != IntPtr.Zero) { Native.UnhookWindowsHookEx(_hook); _hook = IntPtr.Zero; }
         SetAutostart(_s.Autostart);
+        // исправление опечаток: словари грузятся в фоне один раз, личный словарь — заново
+        if (_s.TypoCorrection)
+            _typos = Task.Run(() => TypoCorrector.LoadDefault(new UserDictionary(Settings.UserWordsPath, Settings.IgnorePath)));
+        else _typos = null;
     }
+
+    enum Mode { Smart, TyposOnly, AddToDictionary, IgnoreWord }
 
     public static (uint mods, uint vk) SplitKeys(Keys k)
     {
@@ -146,7 +156,7 @@ sealed class MainWindow : Form
         BeginInvoke(async () => { await Task.Delay(120); _popup.ShowAt(new Point(pt.X + 12, pt.Y + 16)); });
     }
 
-    async void DoConvert(bool fromTray)
+    async void DoConvert(bool fromTray, Mode mode = Mode.Smart)
     {
         if (_busy) return;
         _busy = true;
@@ -168,14 +178,26 @@ sealed class MainWindow : Form
                     if (Native.GetClipboardSequenceNumber() != seq) { await Task.Delay(30); text = TryGetText(); break; }
                 }
                 if (string.IsNullOrEmpty(text)) { if (fromTray) _tray.ShowBalloonTip(2000, "Антираскладка", "Сначала выделите текст.", ToolTipIcon.Info); return; }
-                var dir = _conv.Detect(text);
-                var result = _conv.Convert(text, dir);
-                if (result == text) return;
+                TypoCorrector? typos = null;
+                if (mode != Mode.Smart || _typos != null)
+                    typos = await (_typos ?? Task.Run(() => TypoCorrector.LoadDefault(new UserDictionary(Settings.UserWordsPath, Settings.IgnorePath))));
+                if (mode is Mode.AddToDictionary or Mode.IgnoreWord)
+                {
+                    var w = text.Trim();
+                    bool ok = w.Length > 0 && !w.Any(char.IsWhiteSpace) && (mode == Mode.AddToDictionary ? typos!.User.Add(w) : typos!.User.Ignore(w));
+                    _tray.ShowBalloonTip(2000, "Антираскладка", !ok ? "Выделите одно слово, которого ещё нет в списке." :
+                        mode == Mode.AddToDictionary ? $"«{w}» добавлено в личный словарь." : $"«{w}» больше не будет исправляться.", ToolTipIcon.Info);
+                    return;
+                }
+                string result; Direction? dir;
+                if (mode == Mode.TyposOnly) { result = typos!.Correct(text); dir = null; }
+                else { var fr = TextFixer.Fix(text, _conv, typos); result = fr.Text; dir = fr.Dir; }
+                if (result == text) { if (mode == Mode.TyposOnly) _tray.ShowBalloonTip(1500, "Антираскладка", "Опечаток не найдено.", ToolTipIcon.Info); return; }
                 if (!TrySetText(result)) return;
                 await Task.Delay(30);
                 Native.Keys((0x11, false), (0x56, false), (0x56, true), (0x11, true)); // Ctrl+V
                 await Task.Delay(250);
-                if (_s.SwitchLanguage)
+                if (_s.SwitchLanguage && dir != null)
                 {
                     var hkl = dir == Direction.LatinToCyrillic ? _cyrHkl : _latHkl;
                     if (hkl != IntPtr.Zero) Native.PostMessage(target, Native.WM_INPUTLANGCHANGEREQUEST, IntPtr.Zero, hkl);

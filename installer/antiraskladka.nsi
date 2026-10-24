@@ -1,13 +1,13 @@
 Unicode true
 !include "MUI2.nsh"
 Name "Антираскладка"
-OutFile "..\dist\Antiraskladka-Setup-1.0.0.exe"
+OutFile "../dist/Antiraskladka-Setup-1.1.0.exe"
 InstallDir "$LOCALAPPDATA\Programs\Antiraskladka"
 RequestExecutionLevel user
 SetCompressor /SOLID lzma
-VIProductVersion "1.0.0.0"
+VIProductVersion "1.1.0.0"
 VIAddVersionKey /LANG=1049 "ProductName" "Антираскладка"
-VIAddVersionKey /LANG=1049 "FileVersion" "1.0.0"
+VIAddVersionKey /LANG=1049 "FileVersion" "1.1.0"
 VIAddVersionKey /LANG=1049 "FileDescription" "Установщик Антираскладки"
 VIAddVersionKey /LANG=1049 "LegalCopyright" "Иван Воронцов"
 !define MUI_FINISHPAGE_RUN "$INSTDIR\Antiraskladka.exe"
@@ -24,7 +24,7 @@ Section "Install"
   nsExec::Exec 'taskkill /F /IM Antiraskladka.exe'
   Sleep 500
   SetOutPath "$INSTDIR"
-  File "..\out\Antiraskladka.exe"
+  File "../out/Antiraskladka.exe"
   WriteUninstaller "$INSTDIR\Uninstall.exe"
   CreateDirectory "$SMPROGRAMS\Антираскладка"
   CreateShortcut "$SMPROGRAMS\Антираскладка\Антираскладка.lnk" "$INSTDIR\Antiraskladka.exe"
@@ -32,7 +32,7 @@ Section "Install"
   WriteRegStr HKCU "Software\Microsoft\Windows\CurrentVersion\Run" "Antiraskladka" '"$INSTDIR\Antiraskladka.exe"'
   !define UK "Software\Microsoft\Windows\CurrentVersion\Uninstall\Antiraskladka"
   WriteRegStr HKCU "${UK}" "DisplayName" "Антираскладка"
-  WriteRegStr HKCU "${UK}" "DisplayVersion" "1.0.0"
+  WriteRegStr HKCU "${UK}" "DisplayVersion" "1.1.0"
   WriteRegStr HKCU "${UK}" "Publisher" "Иван Воронцов"
   WriteRegStr HKCU "${UK}" "DisplayIcon" "$INSTDIR\Antiraskladka.exe"
   WriteRegStr HKCU "${UK}" "UninstallString" '"$INSTDIR\Uninstall.exe"'
